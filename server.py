@@ -3,8 +3,7 @@
 # most of this is taken from the tutorial at:
 # https://www.freecodecamp.org/news/create-a-discord-bot-with-python/
 
-import discord
-import os
+import discord, json, os
 
 client = discord.Client()
 
@@ -51,6 +50,7 @@ async def newgame(message):
     
     channel = message.channel
     busy.append(message.author)
+    newgame = {}
 
     def check(m):
         return m.channel == channel and m.author == message.author and m.author in busy
@@ -60,18 +60,31 @@ async def newgame(message):
         await message.channel.send('Cancelling game creation.')
         await newgame.stop()
 
-
     await message.channel.send('Great, which game? Say !cancel to cancel.')
         
     game = await client.wait_for('message', check=check)
     if game.content == '!cancel':
         await cancel()
+    newgame['title'] = game.content
     await channel.send(f'Scheduling {game.content}. On what date?')
 
     date = await client.wait_for('message', check=check)
     if date.content == '!cancel':
         await cancel()
-    await channel.send(f'''Scheduling {game.content} on: {date.content}. \nI'll post it in #upcoming-games. Thanks!''')
+    newgame['date'] = date.content
+
+    schedule = {}
+
+    with open('.log.json', 'r') as log:
+        schedule = json.load(log)
+
+    schedule['key'] = newkey
+    schedule[newkey] = newgame
+
+    with open('.log.json', 'w+') as log:
+        json.dump(schedule, log)
+
+    await channel.send(f'''Scheduled {game.content} on: {date.content}. \nI'll post it in #upcoming-games. Thanks!''')
 
     print(f'User {message.author} scheduled {game.content} for {date.content}.')
 
