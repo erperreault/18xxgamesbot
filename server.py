@@ -76,8 +76,12 @@ async def newgame(message):
     schedule = {}
 
     with open('.log.json', 'r') as log:
-        schedule = json.load(log)
+        try:
+            schedule = json.load(log)
+        except json.decoder.JSONDecodeError:
+            schedule = {"key" : 0}
 
+    newkey = schedule['key'] + 1
     schedule['key'] = newkey
     schedule[newkey] = newgame
 
@@ -85,7 +89,6 @@ async def newgame(message):
         json.dump(schedule, log)
 
     await channel.send(f'''Scheduled {game.content} on: {date.content}. \nI'll post it in #upcoming-games. Thanks!''')
-
     print(f'User {message.author} scheduled {game.content} for {date.content}.')
 
     busy.remove(message.author)
