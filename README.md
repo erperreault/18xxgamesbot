@@ -7,16 +7,10 @@ On the back-end,
 - safely store app secrets in `.env`
 - `start.sh` is required for Python 3
 
-Currently, this bot only runs while the glitch is running.
-
-Currently, this bot only responds to "hello". 
-
-It thinks its name is hello!
-
 [Discord features]
-In the future this bot wants to learn how to: send reminders, 
-clean up channels, automatically convert time
-zones, and log finished game stats. 
+In the future this bot wants to learn how to: schedule future 
+game sessions, send reminders, clean up channels, automatically 
+convert time zones, and log finished game stats. 
 
 An idea for the order we could deliver these features in is:
 1. schedule games via chatbot command that takes game arguments
