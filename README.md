@@ -5,7 +5,7 @@ On the back-end,
 - this app starts at `server.py`
 - add frameworks and packages in `requirements.txt`
 - safely store app secrets in `.env`
-- `start.sh` is required for Python 3
+- `.log.json` will be used to store the game schedule locally
 
 [Discord features]
 In the future this bot wants to learn how to: schedule future 

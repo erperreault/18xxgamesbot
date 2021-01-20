@@ -47,6 +47,7 @@ async def botHelp(message):
 async def newgame(message):
     '''Enter a dialogue to schedule a game session.
     Mark user as "busy" until this is done or cancelled.'''
+    #TODO break this huge function up
     
     channel = message.channel
     busy.append(message.author)
