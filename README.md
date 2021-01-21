@@ -5,11 +5,6 @@ On the back-end,
 - this app starts at `server.py`
 - add frameworks and packages in `requirements.txt`
 - safely store app secrets in `.env`
-- `.log.json` will be used to store the game schedule locally
+- `.log.json` will be used to store the upcoming game schedule locally
 
-[Other features]
-In the future this bot also wants to learn how to: scrape the
-18xx.games website to see whose turn it is, collect play data 
-across all other public games for company winrates, performance 
-per OR, etc. Making a webpage to display the bot's log might be
-helpful. Also host privately on old PC.
+Features to be implemented can be found under Issues > Enhancements.
