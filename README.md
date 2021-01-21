@@ -30,5 +30,3 @@ In the future this bot also wants to learn how to: scrape the
 across all other public games for company winrates, performance 
 per OR, etc. Making a webpage to display the bot's log might be
 helpful. Also host privately on old PC.
-
-Remixed from 'flask-hello-world' by Kenneth Reitz
