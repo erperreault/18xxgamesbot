@@ -6,14 +6,14 @@
 import discord, json, os
 
 client = discord.Client()
-
-busy = [] # Users who are in dialogue (ignore entry-level commands).
+busy = []
 
 @client.event
 async def on_ready():
     '''Status report!'''
     print(f'We have logged in as {client.user}')
 
+# Herein lie message events.
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -24,7 +24,7 @@ async def on_message(message):
             await message.channel.send('Hello! Say "!help" if you need help.')
 
         elif message.content.startswith('!help'):
-            await botHelp(message)
+            await bot_help(message)
 
         elif message.content.startswith('!newgame'):
             await newgame(message)
@@ -33,66 +33,73 @@ async def on_message(message):
 ###
 
 
-async def botHelp(message):
+async def bot_help(message):
     '''List of all accepted commands.'''
 
-    print(f'Responding to {message.author}: "!help"')
     await message.channel.send('''Here are the commands I know:
             hello - I'll say hello back :)
             !help - See this dialogue.
             !newgame - Schedule an upcoming game session.
             !schedule - List all currently scheduled games.''')
 
-
 async def newgame(message):
     '''Enter a dialogue to schedule a game session.
     Mark user as "busy" until this is done or cancelled.'''
-    #TODO break this huge function up
     
+    global busy
     channel = message.channel
-    busy.append(message.author)
-    newgame = {}
+    author = message.author
+    newgame_dict = {}
 
-    def check(m):
-        return m.channel == channel and m.author == message.author and m.author in busy
+    def identity_check(message):
+        return message.channel == channel and message.author == author and message.author in busy
 
-    async def cancel():
-        busy.remove(message.author)
+    async def cancel(message):
+        busy.remove(author)
         await message.channel.send('Cancelling game creation.')
-        await newgame.stop()
+        await newgame.cancel()
 
-    await message.channel.send('Great, which game? Say !cancel to cancel.')
+    async def savegame(entry):
+        '''Imports .log.json. 
+        Start file in format if empty. 
+        Add new game to the lineup with a unique ID.'''
+        with open('.log.json', 'r') as log:
+            try:
+                schedule = json.load(log)
+            except json.decoder.JSONDecodeError:
+                schedule = {"key" : 0}
+
+        newkey = schedule['key'] + 1
+        schedule['key'] = newkey
+        schedule[newkey] = entry
+
+        with open('.log.json', 'w+') as log:
+            json.dump(schedule, log)
+
+    async def check_for_cancel():
+        '''First check that message is in the same thread, then check for '!cancel'.'''
+        x = await client.wait_for('message', check=identity_check)
+        if x.content == '!cancel':
+            await cancel(message)
+        return x.content
+
+    busy.append(author)
+
+    await channel.send('Great, which game? Say !cancel to cancel.')
         
-    game = await client.wait_for('message', check=check)
-    if game.content == '!cancel':
-        await cancel()
-    newgame['title'] = game.content
-    await channel.send(f'Scheduling {game.content}. On what date?')
+    title = await check_for_cancel()
+    newgame_dict['title'] = title
+    await channel.send(f'Scheduling {title}. On what date? Please format like so: 24jan, or 15mar.')
 
-    date = await client.wait_for('message', check=check)
-    if date.content == '!cancel':
-        await cancel()
-    newgame['date'] = date.content
+    date = await check_for_cancel()
+    newgame_dict['date'] = date
 
-    schedule = {}
+    await savegame(newgame_dict)
 
-    with open('.log.json', 'r') as log:
-        try:
-            schedule = json.load(log)
-        except json.decoder.JSONDecodeError:
-            schedule = {"key" : 0}
+    await channel.send(f"Scheduled {title} on {date}. I'll make a channel for it. Thanks!")
+    print(f'User {author} scheduled {title} for {date}.') 
 
-    newkey = schedule['key'] + 1
-    schedule['key'] = newkey
-    schedule[newkey] = newgame
-
-    with open('.log.json', 'w+') as log:
-        json.dump(schedule, log)
-
-    await channel.send(f'''Scheduled {game.content} on: {date.content}. \nI'll post it in #upcoming-games. Thanks!''')
-    print(f'User {message.author} scheduled {game.content} for {date.content}.')
-
-    busy.remove(message.author)
+    busy.remove(author)
 
 
 ###
