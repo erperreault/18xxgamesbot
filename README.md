@@ -2,7 +2,6 @@
 ======================================================
 
 - Core code is in `server.py`
-- Store API secrets in `.env`
-- `.log.json` will be used to store the upcoming game schedule locally
+- Store your Discord bot token in `.env` as `TOKEN = "thisisthetoken"`
 
 Features to be implemented can be found under Issues > Enhancements.
