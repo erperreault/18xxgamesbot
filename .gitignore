@@ -1,4 +1,4 @@
 .env
-.log.json
+.tracked_games.json
 __pycache__
 spare_parts.py
