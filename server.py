@@ -1,25 +1,39 @@
 #!/usr/bin/env python3
-#
-# most of this is taken from the tutorial at:
-# https://www.freecodecamp.org/news/create-a-discord-bot-with-python/
 
-import discord, json, os
+import discord, json, os, urllib.request
 
 client = discord.Client()
-server = discord.Member().guild
-
 help_command = '!help'
+
+
+###
+
+
+def get_game_data(id: str) -> json:
+    with urllib.request.urlopen(f'https://18xx.games/api/game/{id}') as response:
+        return json.loads(response.read())
+
+def get_all_player_ids(game: json) -> list:
+    return [player['id'] for player in game['players']]
+
+def get_acting_id(game: json) -> int:
+    return game['acting'][0]
+
+# for example    
+my_game_id = '25902'
+game_data = get_game_data(my_game_id)
+print(get_acting_id(game_data))
 
 @client.event
 async def on_ready():
-    print(f'We have logged in as {client.user} on {server}')
+    print(f'We have logged in as {client.user}.')
 
 @client.event
 async def on_message(message):
     if message.author == client.user:
         return
 
-    elif message.author not in busy and str(message.channel.type) == 'private':
+    elif str(message.channel.type) == 'private':
         if not message.content.startswith('!'):
             await message.channel.send(f'Hello! Say "{help_command}" if you need help.')
 
