@@ -56,10 +56,11 @@ async def track_game(message):
         await message.channel.send(f'Tracking game ID {game_id[0]} in this channel ({message.channel}).')
         print(f'Tracking {game_id[0]} on channel {channel_id}.')
     else:
-        await message.channel.send(
-            """Sorry, I couldn't figure out the game ID :japanese_ogre:
+        await message.channel.send("""Sorry, I couldn't figure out the game ID :japanese_ogre:
 Your command should look something like this: 
-    !track https://18xx.games/game/25902.""")
+    !track https://18xx.games/game/25902
+    or
+    !track 25902""")
             
 
 def get_game_data(id: str) -> json:
