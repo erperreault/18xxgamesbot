@@ -1,3 +1,4 @@
 .env
 .log.json
 __pycache__
+spare_parts.py
