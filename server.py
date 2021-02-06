@@ -23,6 +23,9 @@ async def on_message(message):
             await track_game(message)
 
     elif str(message.channel.type) == 'private':
+
+        await check_all_games()
+
         if not message.content.startswith('!'):
             await message.channel.send(f'Hello! Say "{help_command}" if you need help.')
 
@@ -80,6 +83,7 @@ Your command should look something like this:
         game_data = get_game_data(game_id)
 
         try:
+            # make sure what we need exists / is legible, else make a fresh start
             with open(tracked_games_fp, 'r') as log_file:
                 log = json.load(log_file)
         except:
@@ -100,6 +104,27 @@ Your command should look something like this:
         await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
 
         print(f'Tracking {game_id} on channel {channel_id}.')
+
+
+async def check_all_games():
+    try:
+        with open(tracked_games_fp, 'r') as log_file:
+            log = json.load(log_file)
+    except:
+        log = {'channels': {}, 'games': {}}
+
+    for channel in log['channels']:
+        for game_id in log['channels'][channel]:
+            game = get_game_data(game_id)
+            true_acting = get_acting_id(game)
+            if log['games'][game_id]['acting'] != true_acting:
+                print(f'Updating acting player for {game_id}: {true_acting}')
+                log['games'][game_id]['acting'] = true_acting
+                target = client.get_channel(int(channel))
+                await target.send(f'{true_acting}')
+
+    with open(tracked_games_fp, 'w') as log_file:
+        json.dump(log, log_file)
 
 ###
 
