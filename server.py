@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re
+import os, json, urllib.request, discord, re, asyncio
 
-client = discord.Client()
+intents = discord.Intents.all()
+client = discord.Client(intents = intents)
 help_command = '!help'
 track_command = '!track'
+startup_command = '!startup'
 tracked_games_fp = '.tracked_games.json'
 
 ###
@@ -12,6 +14,8 @@ tracked_games_fp = '.tracked_games.json'
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}.')
+    print(f'{client.get_channel(795114528118669334)}')
+    await auto_checker()
 
 @client.event
 async def on_message(message):
@@ -19,18 +23,14 @@ async def on_message(message):
         return
 
     elif str(message.channel.type) == 'text':
+
         if message.content.startswith(track_command):
             await track_game(message)
 
-    elif str(message.channel.type) == 'private':
-
-        await check_all_games()
+    elif str(message.channel.type) == 'private' and message.author != client.user:
 
         if not message.content.startswith('!'):
             await message.channel.send(f'Hello! Say "{help_command}" if you need help.')
-
-        if message.content.startswith(track_command):
-            await track_game(message)
 
         elif message.content.startswith(help_command):
             await bot_help(message)
@@ -51,7 +51,11 @@ def get_all_player_ids(game: str) -> list:
 
 
 def get_acting_id(game: str) -> str:
-    return str(game['acting'][0])
+    try:
+        return game['acting'][0]
+    except:
+        print('no acting player found')
+        return 'none or game over'
 
 
 async def bot_help(message):
@@ -83,7 +87,6 @@ Your command should look something like this:
         game_data = get_game_data(game_id)
 
         try:
-            # make sure what we need exists / is legible, else make a fresh start
             with open(tracked_games_fp, 'r') as log_file:
                 log = json.load(log_file)
         except:
@@ -101,12 +104,13 @@ Your command should look something like this:
 
         with open(tracked_games_fp, 'w') as log_file:
             json.dump(log, log_file)
-        await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
 
+        await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
         print(f'Tracking {game_id} on channel {channel_id}.')
 
 
 async def check_all_games():
+    print('Checking all games.')
     try:
         with open(tracked_games_fp, 'r') as log_file:
             log = json.load(log_file)
@@ -125,6 +129,12 @@ async def check_all_games():
 
     with open(tracked_games_fp, 'w') as log_file:
         json.dump(log, log_file)
+
+
+async def auto_checker():
+    while True:
+        await check_all_games()
+        await asyncio.sleep(10)
 
 ###
 
