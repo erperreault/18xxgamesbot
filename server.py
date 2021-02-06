@@ -74,6 +74,7 @@ Your command should look something like this:
     !track https://18xx.games/game/25902
     or
     !track 25902""")
+        
     else:
         game_id = id_results[0]
         game_data = get_game_data(game_id)
