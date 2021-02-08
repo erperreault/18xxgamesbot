@@ -3,3 +3,4 @@
 .player_log.json
 __pycache__
 spare_parts.py
+.ipynb_checkpoints
