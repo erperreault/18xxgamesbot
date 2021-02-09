@@ -3,5 +3,5 @@
 .player_log.json
 __pycache__
 spare_parts.py
-games.db
-users.db
+.games.db
+.users.db
