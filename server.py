@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re, asyncio
+import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3
+
+### Constants ###
 
 intents = discord.Intents.all()
 client = discord.Client(intents = intents)
@@ -11,7 +13,7 @@ sync_command = '!sync'
 tracked_games_fp = '.tracked_games.json'
 player_log_fp = '.player_log.json'
 
-###
+### Discord Events ###
 
 @client.event
 async def on_ready():
@@ -43,7 +45,7 @@ async def on_message(message):
             await message.channel.send(
                 f'Sorry, I don\'t know that command. Say "{help_command}" for the commands I do know.')
 
-###
+### Interior Life Of Bot ###
             
 def get_game_data(id: str) -> str:
     with urllib.request.urlopen(f'https://18xx.games/api/game/{id}') as response:
@@ -103,25 +105,40 @@ Your command should look something like this:
     else:
         game_id = id_results[0]
         game_data = get_game_data(game_id)
+        players = game_data['players']
+        print(players)
+        for player in players:
+            name = player['name']
+            try:
+                with open(player_log_fp, 'r') as player_log_file:
+                    player_log = json.load(player_log_file)
+            except:
+                player_log = {}
+            
+            if name not in player_log.keys():
+                player_log[name] = player['id']
 
         try:
             with open(tracked_games_fp, 'r') as log_file:
-                log = json.load(log_file)
+                game_log = json.load(log_file)
         except:
-            log = {'channels': {}, 'games': {}}
+            game_log = {'channels': {}, 'games': {}}
 
         try:
-            if game_id not in log['channels'][channel_id]:
-                log['channels'][channel_id].append(game_id)
+            if game_id not in game_log['channels'][channel_id]:
+                game_log['channels'][channel_id].append(game_id)
         except KeyError:
-            log['channels'][channel_id] = [game_id]
+            game_log['channels'][channel_id] = [game_id]
 
-        if game_id not in log['games'].keys():
-            log['games'][game_id] = {}
-        log['games'][game_id]['acting'] = get_acting_id(game_data)
+        if game_id not in game_log['games'].keys():
+            game_log['games'][game_id] = {}
+        game_log['games'][game_id]['acting'] = get_acting_id(game_data)
 
         with open(tracked_games_fp, 'w') as log_file:
-            json.dump(log, log_file)
+            json.dump(game_log, log_file)
+
+        with open(player_log_fp, 'w') as player_log_file:
+            json.dump(player_log, player_log_file)
 
         await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
         print(f'Tracking {game_id} on channel {channel_id}.')
@@ -163,24 +180,24 @@ async def auto_checker():
         await asyncio.sleep(10)
 
 async def sync_player_ids(message):
-    web_id = message.content.split(' ')[1]
+    web_name = message.content.split(' ', 1)[1]
+    web_id = 'NULL'
     discord_id = str(message.author.id)
 
-    try:
-        with open(player_log_fp, 'r') as player_log:
-            log = json.load(log_file)
-    except:
-        log = {}
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
 
-    log[web_id] = discord_id
-    log[discord_id] = web_id
+    if sql_client.select_user(cursor, discord_id):
+        sql_client.update_user(cursor, discord_id, web_name)
+    else:
+        sql_client.insert_user(cursor, web_name, web_id, discord_id)
 
-    with open(player_log_fp, 'w') as player_log:
-        json.dump(log, player_log)
+    conn.commit()
+    conn.close()
 
-    await message.channel.send(f'Successfully synced {message.author} as {web_id}.')
-    print(f'Synced {discord_id} as {web_id}')
+    await message.channel.send(f'Successfully synced {message.author} as {web_name}.')
+    print(f'Synced {discord_id} as {web_name}.')
 
-###
+### This Is "main", Sort Of ###
 
 client.run(os.getenv('TOKEN'))
