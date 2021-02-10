@@ -229,4 +229,4 @@ async def unsync_player_id(message):
 setup_users_db(users_db_fp)
 setup_games_db(games_db_fp)
 
-client.run(os.getenv('TOKEN'))
+client.run(os.environ('TOKEN'))
