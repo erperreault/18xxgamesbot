@@ -231,4 +231,4 @@ setup_users_db(users_db_fp)
 setup_games_db(games_db_fp)
 
 load_dotenv()
-client.run(os.getenv('TOKEN')
+client.run(os.getenv('TOKEN'))
