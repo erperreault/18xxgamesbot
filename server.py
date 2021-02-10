@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3, verbage
+import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3
+import verbage
 
 ### Constants ###
 client = discord.Client()
