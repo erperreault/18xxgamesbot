@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3, verbage, dotenv
-from dotenv import load_dotenv
+import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3, verbage
 
 ### Constants ###
 client = discord.Client()
@@ -230,5 +229,4 @@ async def unsync_player_id(message):
 setup_users_db(users_db_fp)
 setup_games_db(games_db_fp)
 
-load_dotenv()
 client.run(os.getenv('TOKEN'))
