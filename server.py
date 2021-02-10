@@ -28,10 +28,13 @@ async def on_message(message):
         if message.content.startswith(track_command):
             await track_game(message)
 
-        if message.content.startswith(sync_command):
+        elif message.content.startswith(sync_command):
             await sync_player_ids(message)
 
-    elif str(message.channel.type) == 'private' and message.author != client.user:
+        elif message.content.startswith(help_command):
+            await bot_help(message)
+
+    elif str(message.channel.type) == 'private':
 
         if not message.content.startswith('!'):
             await message.channel.send(f'Hello! Say "{help_command}" if you need help.')
@@ -68,10 +71,70 @@ def get_player_mention(web_id):
         return web_name 
     else:
         return f'<@{discord_id}>'
+    conn.close()
 
 def fetch_game_data(id: str) -> str:
     with urllib.request.urlopen(f'https://18xx.games/api/game/{id}') as response:
         return json.loads(response.read())
+
+def game_id_regex(message):
+    '''Finds the channel ID.'''
+    id_target = re.compile(r'\d\d\d+')
+    return id_target.findall(message.content)
+
+def formatted_game_results(game_data):
+    results = game_data['result']
+    players = results.keys()
+    scores = sorted(results.values(), reverse=True)
+    formatted = []
+    for score in scores:
+        for player in players:
+            if results[player] == score:
+                formatted.append(f'{player} ({results[player]})')
+    return '-- ' + ', '.join(formatted) + ' --'
+
+async def auto_checker():
+    while True:
+        await check_all_games()
+        await asyncio.sleep(10)
+
+async def check_all_games():
+    print('Checking all games.')
+
+    conn = sqlite3.connect(games_db_fp)
+    user_conn = sqlite3.connect(users_db_fp)
+
+    games = sql_client.read_query(conn, 'SELECT * FROM games')
+    for game in games:
+        local_game_data = game
+        game_id = local_game_data[0]
+        channel = local_game_data[1]
+        local_acting = local_game_data[2]
+        web_game_data = fetch_game_data(game_id)
+        target = client.get_channel(int(channel))
+
+        if len(web_game_data['acting']) == 1:
+            true_acting = str(web_game_data['acting'][0])
+        else:
+            true_acting = 'game over'
+            
+        if true_acting == 'game over':           
+            game_results = formatted_game_results(web_game_data)     
+            await target.send(f'Game over: {game_results}')
+            sql_client.delete_game(conn, game_id)
+            print(f'Deleted game {game_id} - game complete.')
+        elif true_acting != local_acting:
+            print(f'Updating game {game_id}.')
+            acting_discord_id = sql_client.read_query(user_conn, 
+                'SELECT discord_id FROM users WHERE web_id = ?', (true_acting,))
+            mention = get_player_mention(true_acting)
+            sql_client.update_acting_player(conn, game_id, true_acting)
+            await target.send(verbage.discord_mention(mention, game_id))
+
+    conn.close()
+    user_conn.close()
+
+### Bot Commands ###
 
 async def bot_help(message):
     '''List of all accepted commands.'''
@@ -79,17 +142,16 @@ async def bot_help(message):
     await message.channel.send(verbage.help_message(help_command, track_command))
 
 async def track_game(message):
-    id_target = re.compile(r'\d\d\d+')
-    id_results = id_target.findall(message.content)
+    game_id_result = game_id_regex(message)
     channel_id = str(message.channel.id)
 
     conn = sql_client.connect(games_db_fp)
     userconn = sql_client.connect(users_db_fp)
 
-    if len(id_results) != 1:
+    if len(game_id_result) != 1:
         await message.channel.send(verbage.game_id_error)
     else:
-        game_id = id_results[0]
+        game_id = game_id_result[0]
         game_data = fetch_game_data(game_id)
 
         if len(game_data['acting']) == 1:
@@ -117,45 +179,11 @@ async def track_game(message):
                 sql_client.execute_query(userconn, 
                 'UPDATE users SET web_name = ? WHERE web_id = ?', (web_name, web_id))
 
+        print(f'Tracking game ID {game_id} in channel ({channel_id}).')
         await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
 
         conn.close()
-
-
-async def check_all_games():
-    print('Checking all games.')
-
-    conn = sqlite3.connect(games_db_fp)
-    user_conn = sqlite3.connect(users_db_fp)
-
-    games = sql_client.read_query(conn, 'SELECT * FROM games')
-    for game in games:
-        local_game_data = game
-        game_id = local_game_data[0]
-        channel = local_game_data[1]
-        local_acting = local_game_data[2]
-        web_game_data = fetch_game_data(game_id)
-        target = client.get_channel(int(channel))
-
-        if len(web_game_data['acting']) == 1:
-            true_acting = str(web_game_data['acting'][0])
-        else:
-            true_acting = 'game over'
-            
-        if true_acting == 'game over':                
-            await target.send(f'Game over! More on this later.')
-            #TODO finish this ^
-        elif true_acting != local_acting:
-            print(f'Updating game {game_id}.')
-            acting_discord_id = sql_client.read_query(user_conn, 
-                'SELECT discord_id FROM users WHERE web_id = ?', (true_acting,))
-            mention = get_player_mention(true_acting)
-            sql_client.update_acting_player(conn, game_id, true_acting)
-            await target.send(verbage.discord_mention(mention, game_id))
-
-    conn.close()
-    user_conn.close()
-
+        userconn.close()
 
 async def sync_player_ids(message):
     conn = sqlite3.connect(users_db_fp)
@@ -163,9 +191,7 @@ async def sync_player_ids(message):
     new_name = message.content.split(' ', 1)[1]
     discord_id = str(message.author.id)
     local_players = sql_client.read_query(conn, 'SELECT * FROM users')
-    #print(local_players)
     player_names = [player[0] for player in local_players]
-    #print(player_names)
 
     if new_name in player_names:
         sql_client.execute_query(conn, 'UPDATE users SET discord_id = ? WHERE web_name = ?', (discord_id, new_name))
@@ -176,14 +202,7 @@ async def sync_player_ids(message):
 
     conn.close()
 
-async def auto_checker():
-    while True:
-        await check_all_games()
-        await asyncio.sleep(10)
-
-
 ### This Is "main", Sort Of ###
-
 
 setup_users_db(users_db_fp)
 setup_games_db(games_db_fp)

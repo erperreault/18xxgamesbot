@@ -48,3 +48,6 @@ def update_acting_player(connection: object, game_id, acting_player: str):
 
 def update_game_channel(connection: object, channel_id: str, game_id: str):
     execute_query(connection, 'UPDATE games SET channel = ? WHERE game_id = ?', (channel_id, game_id))
+
+def delete_game(connection: object, game_id: str):
+    execute_query(connection, 'DELETE FROM games WHERE game_id = ?', (game_id,))
