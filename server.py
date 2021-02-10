@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3
+import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3, verbage
 
 ### Constants ###
 client = discord.Client()
@@ -8,7 +8,6 @@ help_command = '!help'
 track_command = '!track'
 startup_command = '!startup'
 sync_command = '!sync'
-tracked_games_fp = '.tracked_games.json'
 users_db_fp = '.users.db'
 games_db_fp = '.games.db'
 
@@ -48,74 +47,78 @@ async def on_message(message):
 
 def setup_users_db(users_db_fp):
     conn = sqlite3.connect(users_db_fp)
-    cursor = conn.cursor()
 
-    sql_client.make_user_table(cursor)
+    sql_client.make_user_table(conn)
 
-    conn.commit()
     conn.close()
     
 def setup_games_db(game_db_fp):
     conn = sqlite3.connect(games_db_fp)
-    cursor = conn.cursor()
 
-    sql_client.make_games_table(cursor)
+    sql_client.make_games_table(conn)
 
-    conn.commit()
     conn.close()
-            
+
+def get_player_mention(web_id):
+    conn = sql_client.connect(users_db_fp)
+    player = sql_client.select_user_by_web_id(conn, web_id)[0]
+    web_name = player[0]
+    discord_id = player[2]
+    if not discord_id:
+        return web_name 
+    else:
+        return f'<@{discord_id}>'
+
 def fetch_game_data(id: str) -> str:
     with urllib.request.urlopen(f'https://18xx.games/api/game/{id}') as response:
         return json.loads(response.read())
 
-
-def get_discord_mention_from_web_id(web_id, log):
-    pass
-
-
 async def bot_help(message):
     '''List of all accepted commands.'''
 
-    await message.channel.send(f'''Here are the commands I know:
-            hello - I'll say hello back :)
-            {help_command} - See this dialogue.
-            {track_command} [game ID or link] - Track an async game for @mention notifications.''')
-
+    await message.channel.send(verbage.help_message(help_command, track_command))
 
 async def track_game(message):
     id_target = re.compile(r'\d\d\d+')
     id_results = id_target.findall(message.content)
     channel_id = str(message.channel.id)
 
-    if len(id_results) != 1:
-        await message.channel.send(
-'''Sorry, I couldn't figure out the game ID :japanese_ogre:
-Your command should look something like this: 
-    !track https://18xx.games/game/25902
-    or
-    !track 25902''')
+    conn = sql_client.connect(games_db_fp)
+    userconn = sql_client.connect(users_db_fp)
 
+    if len(id_results) != 1:
+        await message.channel.send(verbage.game_id_error)
     else:
         game_id = id_results[0]
         game_data = fetch_game_data(game_id)
-        players = game_data['players']
-
-        conn = sqlite3.connect(games_db_fp)
-        gcursor = conn.cursor()
 
         if len(game_data['acting']) == 1:
             acting = str(game_data['acting'][0])
         else:
             acting = 'game over'
 
-        if game_id not in gcursor.execute('SELECT game_id FROM games').fetchall():
-            sql_client.insert_game(gcursor, game_id, channel_id, acting)
+        already_in_db = sql_client.select_game(conn, game_id)
+        if already_in_db:
+            sql_client.update_game_channel(conn, channel_id, game_id)
         else:
-            gcursor.execute('UPDATE games SET channel = ? WHERE game_id = ?', (channel_id, game_id))
+            sql_client.insert_game(conn, game_id, channel_id, acting)
 
-        await message.channel.send(f'Now tracking game ID {game_id} in this channel ({message.channel}).')
+        web_players = game_data['players']
+        local_players = sql_client.read_query(userconn, 'SELECT * FROM users')
+        player_ids = [player[1] for player in local_players]
+        player_names = [player[0] for player in local_players]
 
-        conn.commit()
+        for player in web_players:
+            web_id = str(player['id'])
+            web_name = player['name']
+            if web_id not in player_ids:
+                sql_client.insert_user(userconn, web_name, web_id, None)
+            elif web_id in player_ids and web_name not in player_names:
+                sql_client.execute_query(userconn, 
+                'UPDATE users SET web_name = ? WHERE web_id = ?', (web_name, web_id))
+
+        await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
+
         conn.close()
 
 
@@ -123,58 +126,60 @@ async def check_all_games():
     print('Checking all games.')
 
     conn = sqlite3.connect(games_db_fp)
-    cursor = conn.cursor()
+    user_conn = sqlite3.connect(users_db_fp)
 
-    game_ids = cursor.execute('SELECT game_id FROM games').fetchall()
-    for game_id in game_ids:
-        local_game_data = cursor.execute('SELECT * FROM games WHERE game_id = ?', game_id).fetchone()
+    games = sql_client.read_query(conn, 'SELECT * FROM games')
+    for game in games:
+        local_game_data = game
         game_id = local_game_data[0]
         channel = local_game_data[1]
         local_acting = local_game_data[2]
         web_game_data = fetch_game_data(game_id)
+        target = client.get_channel(int(channel))
 
         if len(web_game_data['acting']) == 1:
             true_acting = str(web_game_data['acting'][0])
         else:
             true_acting = 'game over'
-
-        target = client.get_channel(int(channel))
+            
         if true_acting == 'game over':                
             await target.send(f'Game over! More on this later.')
             #TODO finish this ^
         elif true_acting != local_acting:
-            sql_client.update_acting_player(cursor, game_id, true_acting)
-            await target.send(f'''{true_acting} - your turn! 
-https://18xx.games/game/{game_id}''')
+            print(f'Updating game {game_id}.')
+            acting_discord_id = sql_client.read_query(user_conn, 
+                'SELECT discord_id FROM users WHERE web_id = ?', (true_acting,))
+            mention = get_player_mention(true_acting)
+            sql_client.update_acting_player(conn, game_id, true_acting)
+            await target.send(verbage.discord_mention(mention, game_id))
 
-    conn.commit()
     conn.close()
+    user_conn.close()
 
+
+async def sync_player_ids(message):
+    conn = sqlite3.connect(users_db_fp)
+
+    new_name = message.content.split(' ', 1)[1]
+    discord_id = str(message.author.id)
+    local_players = sql_client.read_query(conn, 'SELECT * FROM users')
+    #print(local_players)
+    player_names = [player[0] for player in local_players]
+    #print(player_names)
+
+    if new_name in player_names:
+        sql_client.execute_query(conn, 'UPDATE users SET discord_id = ? WHERE web_name = ?', (discord_id, new_name))
+        await message.channel.send(f'Synced {message.author} as {new_name}.')
+        print(f'Synced {discord_id} as {new_name}.')
+    else:
+        await message.channel.send(f'Username "{new_name}" not found, make sure you are in a tracked game first.')
+
+    conn.close()
 
 async def auto_checker():
     while True:
         await check_all_games()
         await asyncio.sleep(10)
-
-
-async def sync_player_ids(message):
-    web_name = message.content.split(' ', 1)[1]
-    web_id = 'NULL'
-    discord_id = str(message.author.id)
-
-    conn = sqlite3.connect(player_log_fp)
-    cursor = conn.cursor()
-
-    if sql_client.select_user(cursor, discord_id):
-        sql_client.update_user(cursor, discord_id, web_name)
-    else:
-        sql_client.insert_user(cursor, web_name, web_id, discord_id)
-
-    conn.commit()
-    conn.close()
-
-    await message.channel.send(f'Synced {message.author} as {web_name}.')
-    print(f'Synced {discord_id} as {web_name}.')
 
 
 ### This Is "main", Sort Of ###
