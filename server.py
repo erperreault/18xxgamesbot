@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os, json, urllib.request, discord, re, asyncio, sql_client, sqlite3, verbage
+from boto.s3.connection import S3Connection
 
 ### Constants ###
 client = discord.Client()
@@ -229,4 +230,4 @@ async def unsync_player_id(message):
 setup_users_db(users_db_fp)
 setup_games_db(games_db_fp)
 
-client.run(process.env.TOKEN)
+client.run(S3Connection(os.environ['TOKEN']))
