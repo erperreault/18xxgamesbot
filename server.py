@@ -8,6 +8,7 @@ help_command = '!help'
 track_command = '!track'
 startup_command = '!startup'
 sync_command = '!sync'
+unsync_command = '!unsync'
 users_db_fp = '.users.db'
 games_db_fp = '.games.db'
 
@@ -29,7 +30,10 @@ async def on_message(message):
             await track_game(message)
 
         elif message.content.startswith(sync_command):
-            await sync_player_ids(message)
+            await sync_player_id(message)
+
+        elif message.content.startswith(unsync_command):
+            await unsync_player_id(message)
 
         elif message.content.startswith(help_command):
             await bot_help(message)
@@ -185,7 +189,7 @@ async def track_game(message):
         conn.close()
         userconn.close()
 
-async def sync_player_ids(message):
+async def sync_player_id(message):
     conn = sqlite3.connect(users_db_fp)
 
     new_name = message.content.split(' ', 1)[1]
@@ -195,12 +199,30 @@ async def sync_player_ids(message):
 
     if new_name in player_names:
         sql_client.execute_query(conn, 'UPDATE users SET discord_id = ? WHERE web_name = ?', (discord_id, new_name))
-        await message.channel.send(f'Synced {message.author} as {new_name}.')
-        print(f'Synced {discord_id} as {new_name}.')
+        await message.channel.send(f'Synced {message.author} as "{new_name}".')
+        print(f'Synced {discord_id} as "{new_name}".')
     else:
         await message.channel.send(f'Username "{new_name}" not found, make sure you are in a tracked game first.')
 
     conn.close()
+
+async def unsync_player_id(message):
+    conn = sqlite3.connect(users_db_fp)
+
+    target_name = message.content.split(' ', 1)[1]
+    discord_id = str(message.author.id)
+    local_players = sql_client.read_query(conn, 'SELECT * FROM users')
+    player_names = [player[0] for player in local_players]
+
+    if target_name in player_names:
+        sql_client.execute_query(conn, 'UPDATE users SET discord_id = NULL WHERE web_name = ?', (target_name,))
+        await message.channel.send(f'Unsynced {message.author} from "{target_name}".')
+        print(f'Unsynced {discord_id} from "{target_name}".')
+    else:
+        await message.channel.send(f'Username "{target_name}" not found, make sure you are synced first.')
+
+    conn.close()
+
 
 ### This Is "main", Sort Of ###
 
