@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re, asyncio, sql_client, verbage, sqlite3
+import os, json, urllib.request, discord, re, asyncio, sql_client, verbage, psycopg2
 
 ### Constants ###
 client = discord.Client()
@@ -11,6 +11,7 @@ sync_command = '!sync'
 unsync_command = '!unsync'
 users_db_fp = '.users.db'
 games_db_fp = '.games.db'
+postgres_url = os.getenv('DATABASE_URL')
 
 ### Discord Events ###
 
@@ -53,14 +54,14 @@ async def on_message(message):
 ### Interior Life Of Bot ###
 
 def setup_users_db(users_db_fp):
-    conn = sqlite3.connect(users_db_fp)
+    conn = psycopg2.connect(postgres_url, sslmode='require')
 
     sql_client.make_user_table(conn)
 
     conn.close()
     
 def setup_games_db(game_db_fp):
-    conn = sqlite3.connect(games_db_fp)
+    conn = psycopg2.connect(postgres_url, sslmode='require'))
 
     sql_client.make_games_table(conn)
 
@@ -105,8 +106,8 @@ async def auto_checker():
 async def check_all_games():
     print('Checking all games.')
 
-    conn = sqlite3.connect(games_db_fp)
-    user_conn = sqlite3.connect(users_db_fp)
+    conn = psycopg2.connect(postgres_url, sslmode='require'))
+    user_conn = psycopg2.connect(postgres_url, sslmode='require'))
 
     games = sql_client.read_query(conn, 'SELECT * FROM games')
     for game in games:
@@ -190,7 +191,7 @@ async def track_game(message):
         userconn.close()
 
 async def sync_player_id(message):
-    conn = sqlite3.connect(users_db_fp)
+    conn = psycopg2.connect(postgres_url, sslmode='require'))
 
     new_name = message.content.split(' ', 1)[1]
     discord_id = str(message.author.id)
@@ -207,7 +208,7 @@ async def sync_player_id(message):
     conn.close()
 
 async def unsync_player_id(message):
-    conn = sqlite3.connect(users_db_fp)
+    conn = psycopg2.connect(postgres_url, sslmode='require'))
 
     target_name = message.content.split(' ', 1)[1]
     discord_id = str(message.author.id)

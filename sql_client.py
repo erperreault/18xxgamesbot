@@ -1,7 +1,7 @@
-import sqlite3
+import psycopg2
 
 def connect(db_fp):
-    return sqlite3.connect(db_fp)
+    return psycopg2.connect(postgres_url, sslmode='require')
 
 def execute_query(connection, query, args=()):
     cursor = connection.cursor()
