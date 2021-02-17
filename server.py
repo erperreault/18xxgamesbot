@@ -183,7 +183,7 @@ async def track_game(message):
                 sql_client.execute_query(userconn, 
                 'UPDATE users SET web_name = ? WHERE web_id = ?', (web_name, web_id))
 
-        print(f'Tracking game ID {game_id} in channel ({channel_id}).')
+        print(f'Tracking game ID {game_id} in channel {channel_id}.')
         await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
 
         conn.close()
