@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import os, json, urllib.request, discord, re, asyncio, sql_client, verbage, psycopg2
+#TODO check if i can reuse connections instead of sql_client.connect over and over again
+#TODO get rid of execute_query in server.py
 
 ### Constants ###
 client = discord.Client()
@@ -9,8 +11,6 @@ track_command = '!track'
 startup_command = '!startup'
 sync_command = '!sync'
 unsync_command = '!unsync'
-users_db_fp = '.users.db'
-games_db_fp = '.games.db'
 postgres_url = os.getenv('DATABASE_URL')
 
 ### Discord Events ###
@@ -82,11 +82,17 @@ def fetch_game_data(id: str) -> str:
     with urllib.request.urlopen(f'https://18xx.games/api/game/{id}') as response:
         return json.loads(response.read())
 
-def game_id_regex(message):
+def game_id_regex(message_content: str) -> str:
     '''Finds the channel ID.'''
+    if message_content == None:
+        return ''
     id_target = re.compile(r'\d\d\d+')
-    return id_target.findall(message.content)
-
+    result = id_target.findall(message_content)
+    if len(result) != 1:
+        return ''
+    else:
+        return result[0]
+    
 def formatted_game_results(game_data):
     results = game_data['result']
     players = results.keys()
@@ -147,16 +153,16 @@ async def bot_help(message):
     await message.channel.send(verbage.help_message(help_command, track_command, sync_command))
 
 async def track_game(message):
-    game_id_result = game_id_regex(message)
+    game_id_result = game_id_regex(message.content)
     channel_id = str(message.channel.id)
 
     conn = sql_client.connect(postgres_url)
     userconn = sql_client.connect(postgres_url)
 
-    if len(game_id_result) != 1:
+    if game_id_result == '':
         await message.channel.send(verbage.game_id_error)
     else:
-        game_id = game_id_result[0]
+        game_id = game_id_result
         game_data = fetch_game_data(game_id)
 
         if len(game_data['acting']) == 1:
@@ -175,6 +181,7 @@ async def track_game(message):
         player_ids = [player[1] for player in local_players]
         player_names = [player[0] for player in local_players]
 
+# make this its own function
         for player in web_players:
             web_id = str(player['id'])
             web_name = player['name']
