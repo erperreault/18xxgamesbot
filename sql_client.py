@@ -1,7 +1,7 @@
 import psycopg2
 
 def connect(db_fp):
-    return psycopg2.connect(postgres_url, sslmode='require')
+    return psycopg2.connect(db_fp, sslmode='require')
 
 def execute_query(connection, query, args=()):
     cursor = connection.cursor()
