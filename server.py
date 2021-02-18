@@ -53,14 +53,14 @@ async def on_message(message):
 
 ### Interior Life Of Bot ###
 
-def setup_users_db(users_db_fp):
+def setup_users_db(postgres_url):
     conn = psycopg2.connect(postgres_url, sslmode='require')
 
     sql_client.make_user_table(conn)
 
     conn.close()
     
-def setup_games_db(game_db_fp):
+def setup_games_db(postgres_url):
     conn = psycopg2.connect(postgres_url, sslmode='require')
 
     sql_client.make_games_table(conn)
@@ -68,7 +68,7 @@ def setup_games_db(game_db_fp):
     conn.close()
 
 def get_player_mention(web_id):
-    conn = sql_client.connect(users_db_fp)
+    conn = sql_client.connect(postgres_url)
     player = sql_client.select_user_by_web_id(conn, web_id)[0]
     web_name = player[0]
     discord_id = player[2]
@@ -150,8 +150,8 @@ async def track_game(message):
     game_id_result = game_id_regex(message)
     channel_id = str(message.channel.id)
 
-    conn = sql_client.connect(games_db_fp)
-    userconn = sql_client.connect(users_db_fp)
+    conn = sql_client.connect(postgres_url)
+    userconn = sql_client.connect(postgres_url)
 
     if len(game_id_result) != 1:
         await message.channel.send(verbage.game_id_error)
@@ -227,7 +227,7 @@ async def unsync_player_id(message):
 
 ### This Is "main", Sort Of ###
 
-setup_users_db(users_db_fp)
-setup_games_db(games_db_fp)
+setup_users_db(postgres_url)
+setup_games_db(postgres_url)
 
 client.run(os.getenv('TOKEN'))
