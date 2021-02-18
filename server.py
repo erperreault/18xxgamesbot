@@ -131,7 +131,7 @@ async def check_all_games():
         elif true_acting != local_acting:
             print(f'Updating game {game_id}.')
             acting_discord_id = sql_client.read_query(user_conn, 
-                'SELECT discord_id FROM users WHERE web_id = ?', (true_acting,))
+                'SELECT discord_id FROM users WHERE web_id = %s', (true_acting,))
             mention = get_player_mention(true_acting)
             sql_client.update_acting_player(conn, game_id, true_acting)
             await target.send(verbage.discord_mention(mention, game_id))
@@ -182,7 +182,7 @@ async def track_game(message):
                 sql_client.insert_user(userconn, web_name, web_id, None)
             elif web_id in player_ids and web_name not in player_names:
                 sql_client.execute_query(userconn, 
-                'UPDATE users SET web_name = ? WHERE web_id = ?', (web_name, web_id))
+                'UPDATE users SET web_name = %s WHERE web_id = %s', (web_name, web_id))
 
         print(f'Tracking game ID {game_id} in channel {channel_id}.')
         await message.channel.send(f'Tracking game ID {game_id} in this channel ({message.channel}).')
@@ -199,7 +199,7 @@ async def sync_player_id(message):
     player_names = [player[0] for player in local_players]
 
     if new_name in player_names:
-        sql_client.execute_query(conn, 'UPDATE users SET discord_id = ? WHERE web_name = ?', (discord_id, new_name))
+        sql_client.execute_query(conn, 'UPDATE users SET discord_id = %s WHERE web_name = %s', (discord_id, new_name))
         await message.channel.send(f'Synced {message.author} as "{new_name}".')
         print(f'Synced {discord_id} as "{new_name}".')
     else:
@@ -216,7 +216,7 @@ async def unsync_player_id(message):
     player_names = [player[0] for player in local_players]
 
     if target_name in player_names:
-        sql_client.execute_query(conn, 'UPDATE users SET discord_id = NULL WHERE web_name = ?', (target_name,))
+        sql_client.execute_query(conn, 'UPDATE users SET discord_id = NULL WHERE web_name = %s', (target_name,))
         await message.channel.send(f'Unsynced {message.author} from "{target_name}".')
         print(f'Unsynced {discord_id} from "{target_name}".')
     else:
