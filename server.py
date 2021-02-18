@@ -144,7 +144,7 @@ async def check_all_games():
 async def bot_help(message):
     '''List of all accepted commands.'''
 
-    await message.channel.send(verbage.help_message(help_command, track_command))
+    await message.channel.send(verbage.help_message(help_command, track_command, sync_command))
 
 async def track_game(message):
     game_id_result = game_id_regex(message)
