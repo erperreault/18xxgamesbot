@@ -61,7 +61,7 @@ def setup_users_db(users_db_fp):
     conn.close()
     
 def setup_games_db(game_db_fp):
-    conn = psycopg2.connect(postgres_url, sslmode='require'))
+    conn = psycopg2.connect(postgres_url, sslmode='require')
 
     sql_client.make_games_table(conn)
 
@@ -106,8 +106,8 @@ async def auto_checker():
 async def check_all_games():
     print('Checking all games.')
 
-    conn = psycopg2.connect(postgres_url, sslmode='require'))
-    user_conn = psycopg2.connect(postgres_url, sslmode='require'))
+    conn = psycopg2.connect(postgres_url, sslmode='require')
+    user_conn = psycopg2.connect(postgres_url, sslmode='require')
 
     games = sql_client.read_query(conn, 'SELECT * FROM games')
     for game in games:
@@ -191,7 +191,7 @@ async def track_game(message):
         userconn.close()
 
 async def sync_player_id(message):
-    conn = psycopg2.connect(postgres_url, sslmode='require'))
+    conn = psycopg2.connect(postgres_url, sslmode='require')
 
     new_name = message.content.split(' ', 1)[1]
     discord_id = str(message.author.id)
@@ -208,7 +208,7 @@ async def sync_player_id(message):
     conn.close()
 
 async def unsync_player_id(message):
-    conn = psycopg2.connect(postgres_url, sslmode='require'))
+    conn = psycopg2.connect(postgres_url, sslmode='require')
 
     target_name = message.content.split(' ', 1)[1]
     discord_id = str(message.author.id)
