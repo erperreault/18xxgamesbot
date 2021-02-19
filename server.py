@@ -5,6 +5,7 @@ import os, json, urllib.request, discord, re, asyncio, sql_client, verbage, psyc
 #TODO get rid of execute_query in server.py
 
 ### Constants ###
+
 client = discord.Client()
 help_command = '!help'
 track_command = '!track'
@@ -51,7 +52,7 @@ async def on_message(message):
             await message.channel.send(
                 f'Sorry, I don\'t know that command. Say "{help_command}" for the commands I do know.')
 
-### Interior Life Of Bot ###
+### Helper Functions ###
 
 def setup_users_db(postgres_url):
     conn = psycopg2.connect(postgres_url, sslmode='require')
@@ -184,7 +185,7 @@ async def track_game(message):
         player_ids = [player[1] for player in local_players]
         player_names = [player[0] for player in local_players]
 
-# make this its own function
+#TODO make this its own function
         for player in web_players:
             web_id = str(player['id'])
             web_name = player['name']
@@ -234,10 +235,13 @@ async def unsync_player_id(message):
 
     conn.close()
 
+### Downbeat! ###
 
-### This Is "main", Sort Of ###
+def main():
+    setup_users_db(postgres_url)
+    setup_games_db(postgres_url)
 
-setup_users_db(postgres_url)
-setup_games_db(postgres_url)
+    client.run(os.getenv('TOKEN'))
 
-client.run(os.getenv('TOKEN'))
+if __name__ == '__main__':
+    main()
