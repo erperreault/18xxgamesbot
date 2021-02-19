@@ -106,7 +106,10 @@ def formatted_game_results(game_data):
 
 async def auto_checker():
     while True:
-        await check_all_games()
+        try:
+            await check_all_games()
+        except Exception as e:
+            print(e.message)
         await asyncio.sleep(10)
 
 async def check_all_games():
