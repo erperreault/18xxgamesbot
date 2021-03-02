@@ -157,16 +157,15 @@ async def bot_help(message):
     await message.channel.send(verbage.help_message(help_command, track_command, sync_command))
 
 async def track_game(message):
-    game_id_result = game_id_regex(message.content)
+    game_id = game_id_regex(message.content)
     channel_id = str(message.channel.id)
 
     conn = sql_client.connect(postgres_url)
     userconn = sql_client.connect(postgres_url)
 
-    if game_id_result == '':
+    if game_id == '':
         await message.channel.send(verbage.game_id_error)
     else:
-        game_id = game_id_result
         game_data = fetch_game_data(game_id)
 
         if len(game_data['acting']) == 1:
