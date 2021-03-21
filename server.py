@@ -111,7 +111,7 @@ async def auto_checker():
             await check_all_games()
         except Exception as e:
             print(f'ERROR: {e}')
-        await asyncio.sleep(10)
+        await asyncio.sleep(30)
 
 async def check_all_games():
     print('Checking all games.')
