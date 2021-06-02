@@ -11,12 +11,12 @@ import discord
 import psycopg2
 
 client = discord.Client()
+postgres_url = os.getenv('DATABASE_URL')
+
 help_command = '!help'
 track_command = '!track'
-startup_command = '!startup'
 sync_command = '!sync'
 unsync_command = '!unsync'
-postgres_url = os.getenv('DATABASE_URL')
 
 @client.event
 async def on_ready():
