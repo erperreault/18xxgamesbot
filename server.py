@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 
-import os, json, urllib.request, discord, re, asyncio, sql_client, verbage, psycopg2
-#TODO check if i can reuse connections instead of sql_client.connect over and over again
-#TODO get rid of execute_query in server.py
-
-### Constants ###
+import os
+import re
+import json
+import asyncio
+import urllib.request
+import sql_client
+import verbage
+import discord
+import psycopg2
 
 client = discord.Client()
-help_command = '!help'
-track_command = '!track'
-startup_command = '!startup'
-sync_command = '!sync'
-unsync_command = '!unsync'
 postgres_url = os.getenv('DATABASE_URL')
 
-### Discord Events ###
+help_command = '!help'
+track_command = '!track'
+sync_command = '!sync'
+unsync_command = '!unsync'
 
 @client.event
 async def on_ready():
@@ -51,8 +53,6 @@ async def on_message(message):
         else:
             await message.channel.send(
                 f'Sorry, I don\'t know that command. Say "{help_command}" for the commands I do know.')
-
-### Helper Functions ###
 
 def setup_users_db(postgres_url):
     conn = psycopg2.connect(postgres_url, sslmode='require')
@@ -149,8 +149,6 @@ async def check_all_games():
     conn.close()
     user_conn.close()
 
-### Bot Commands ###
-
 async def bot_help(message):
     '''List of all accepted commands.'''
 
@@ -184,7 +182,6 @@ async def track_game(message):
         player_ids = [player[1] for player in local_players]
         player_names = [player[0] for player in local_players]
 
-#TODO make this its own function
         for player in web_players:
             web_id = str(player['id'])
             web_name = player['name']
@@ -234,7 +231,7 @@ async def unsync_player_id(message):
 
     conn.close()
 
-### Downbeat! ###
+###
 
 def main():
     setup_users_db(postgres_url)
