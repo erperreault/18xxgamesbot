@@ -1,7 +1,7 @@
 18xx.games Bot - A friendly Discord chatbot
 ======================================================
 
-Features to be implemented can be found under Issues > Enhancements. If you'd like to contribute please open Issues and make Pull Requests.
+If you'd like to contribute please open Issues and make Pull Requests.
 
 To run this bot yourself: 
 * Ensure you have installed the requirements in `requirements.txt`, then `git clone` this repository.
